@@ -5,23 +5,23 @@
 #include <ESP_FlexyStepper.h>
 
 // IO pin assignments
-#define MOTOR_1_STEP_PIN 33
-#define MOTOR_1_DIRECTION_PIN 25
+const int MOTOR_V_STEP_PIN = 14;
+const int MOTOR_V_DIRECTION_PIN = 12;
 
-#define MOTOR_2_STEP_PIN 27
-#define MOTOR_2_DIRECTION_PIN 14
+const int MOTOR_X_STEP_PIN = 25;
+const int MOTOR_X_DIRECTION_PIN = 26;
 
-#define MOTOR_3_STEP_PIN 27
-#define MOTOR_3_DIRECTION_PIN 14
+const int MOTOR_Y_STEP_PIN = 32;
+const int MOTOR_Y_DIRECTION_PIN = 33;
 
-#define EMERGENCY_STOP_PIN 13 // define the IO pin the emergency stop switch is connected to
-#define LIMIT_SWITCH_PIN 32   // define the IO pin where the limit switches are connected to (switches in series in normally closed setup against ground)
+const int LIMIT_SWITCH_PIN_A = 15; // define the IO pin the emergency stop switch is connected to
+const int LIMIT_SWITCH_PIN_B = 4;  // define the IO pin where the limit switches are connected to (switches in series in normally closed setup against ground)
 
 // Speed settings
-#define DISTANCE_TO_TRAVEL_IN_STEPS 100
-#define SPEED_IN_STEPS_PER_SECOND 100
-#define ACCELERATION_IN_STEPS_PER_SECOND 800
-#define DECELERATION_IN_STEPS_PER_SECOND 800
+const int DISTANCE_TO_TRAVEL_IN_STEPS = 1800 * 10;
+const int SPEED_IN_STEPS_PER_SECOND = 30000;
+const int ACCELERATION_IN_STEPS_PER_SECOND = 30000;
+const int DECELERATION_IN_STEPS_PER_SECOND = 30000;
 
 
 
@@ -30,14 +30,12 @@ class MotorController
 
 public:
     MotorController(const char *TagONE,const char *TagTWO,const char *TagTHREE);
-    void Setting_MotorONE(MotorSettings Settings);
-    void Setting_MotorSecond(MotorSettings Settings);
-    void Setting_MotorThree(MotorSettings Settings);
-    void moveMotorOne(int steps);
-    void moveMotorSecond(int steps);
-    void moveMotorThree(int steps);
-    void moveToHome(int steps);
-    
+
+    void moveMotor(int stepsA,int stepsB,int stepsC);
+
+    void moveToHome();
+    void Setting_Motor(ESP_FlexyStepper *MT,MotorSettings Settings);
+   
     
     bool init();
     
@@ -46,12 +44,11 @@ public:
     MotorSettings getMotorOneSet();
     MotorSettings getMotorSecondSet();
     MotorSettings getMotorThreeSet();
-
-
+ 
 private:
+    ESP_FlexyStepper MTViela;
     ESP_FlexyStepper MTOne;
     ESP_FlexyStepper MTSecond;
-    ESP_FlexyStepper MTThree;
     MotorSettings MotorOne;
     MotorSettings MotorSecond;
     MotorSettings MotorThree;

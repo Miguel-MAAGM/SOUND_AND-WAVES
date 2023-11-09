@@ -31,14 +31,13 @@ void WifiManager::connectToServer()
     {
         Serial.println("Conectado al servidor");
         StaticJsonDocument<200> jsonDoc; // Tamaño máximo del JSON
-        jsonDoc["name"] = "mi_ID";
-        jsonDoc["type"] = "mi_tipo";
+        jsonDoc["name"] = "TW3";
+        jsonDoc["type"] = "ACT";
 
         // Serializa el objeto JSON a una cadena
         String jsonStr;
         serializeJson(jsonDoc, jsonStr);
         client.println(jsonStr);
-
     }
     else
     {
@@ -54,18 +53,14 @@ bool WifiManager::checkForData()
         if (client.available())
         {
             char c = client.read();
-            if (c == -1)
-            {
-                Flag_ENDDATA = true;
-                Serial.println("FIN TRANSMISIÓN");
-            }
-
             if (c == '\n')
             {
                 // Procesar la línea completa almacenada en el buffer
                 Serial.println("Línea completa recibida: " + buffer);
+                buffer_f=buffer;
                 // Limpia el buffer después de procesar la línea
                 buffer = "";
+                return true;
             }
             else
             {
@@ -73,6 +68,7 @@ bool WifiManager::checkForData()
                 buffer += c;
             }
         }
+        
     }
     else
     {
@@ -80,5 +76,15 @@ bool WifiManager::checkForData()
         connectToServer();
     }
 
-    return true;
+    return false;
+}
+
+String WifiManager::getCMD()
+{
+    return doc["CMD"];
+}
+
+String WifiManager::getCfullCMD()
+{
+    return buffer_f;
 }

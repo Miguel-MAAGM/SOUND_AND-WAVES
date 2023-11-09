@@ -1,0 +1,93 @@
+#include "Arduino.h"
+//#include "towerControl.h"
+#include "WifiManager.h"
+#include "esp_task_wdt.h"  // Para trabajar con el WDT en las tareas
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"  // Para trabajar con tareas en FreeRTOS
+#include <ESP_FlexyStepper.h>
+
+const char *ssid = "celuMiguel";       // Enter SSID
+const char *password = "12345678";       // Enter Password
+const char *server_ip = "192.168.1.113"; // Enter server adress
+const uint16_t server_port = 12345;      // Enter server port
+
+ //MotorController MotorCtrl("M1","M2","M3");
+ WifiManager Wifi_Manager(ssid,password,server_ip,server_port);
+
+
+// IO pin assignments
+const int MOTOR_1_STEP_PIN = 14;
+const int MOTOR_1_DIRECTION_PIN = 12;
+
+const int MOTOR_2_STEP_PIN = 25;
+const int MOTOR_2_DIRECTION_PIN = 26;
+
+const int MOTOR_3_STEP_PIN = 32;
+const int MOTOR_3_DIRECTION_PIN = 33;
+
+
+const int EMERGENCY_STOP_PIN = 13; //define the IO pin the emergency stop switch is connected to
+const int LIMIT_SWITCH_PIN = 35;   //define the IO pin where the limit switches are connected to (switches in series in normally closed setup against ground)
+
+// Speed settings
+const int DISTANCE_TO_TRAVEL_IN_STEPS = 1800*10;
+const int SPEED_IN_STEPS_PER_SECOND = 30000;
+const int ACCELERATION_IN_STEPS_PER_SECOND = 30000;
+const int DECELERATION_IN_STEPS_PER_SECOND = 30000;
+
+// create the stepper motor object
+ESP_FlexyStepper stepper_x;
+ESP_FlexyStepper stepper_y;
+ESP_FlexyStepper stepper_z;
+
+int previousDirection = 1;
+
+void setup()
+{
+  Serial.begin(9600);
+  // connect and configure the stepper motor to its IO pins
+  stepper_x.connectToPins(MOTOR_1_STEP_PIN, MOTOR_1_DIRECTION_PIN);
+  stepper_y.connectToPins(MOTOR_2_STEP_PIN, MOTOR_2_DIRECTION_PIN);
+  stepper_z.connectToPins(MOTOR_3_STEP_PIN, MOTOR_3_DIRECTION_PIN);
+  // set the speed and acceleration rates for the stepper motor
+  stepper_x.setSpeedInStepsPerSecond(SPEED_IN_STEPS_PER_SECOND);
+  stepper_x.setAccelerationInStepsPerSecondPerSecond(ACCELERATION_IN_STEPS_PER_SECOND);
+  stepper_x.setDecelerationInStepsPerSecondPerSecond(DECELERATION_IN_STEPS_PER_SECOND);
+
+  stepper_y.setSpeedInStepsPerSecond(SPEED_IN_STEPS_PER_SECOND/200);
+  stepper_y.setAccelerationInStepsPerSecondPerSecond(ACCELERATION_IN_STEPS_PER_SECOND/200);
+  stepper_y.setDecelerationInStepsPerSecondPerSecond(DECELERATION_IN_STEPS_PER_SECOND/200);
+  
+  stepper_z.setSpeedInStepsPerSecond(SPEED_IN_STEPS_PER_SECOND);
+  stepper_z.setAccelerationInStepsPerSecondPerSecond(ACCELERATION_IN_STEPS_PER_SECOND);
+  stepper_z.setDecelerationInStepsPerSecondPerSecond(DECELERATION_IN_STEPS_PER_SECOND);
+  // Not start the stepper instance as a service in the "background" as a separate task
+  // and the OS of the ESP will take care of invoking the processMovement() task regularily so you can do whatever you want in the loop function
+  stepper_x.startAsService(1);
+  stepper_y.startAsService(1);
+  stepper_z.startAsService(1);
+  Wifi_Manager.connectToWifi();
+}
+
+void loop()
+{
+  // just move the stepper back and forth in an endless loop
+  if (stepper_x.getDistanceToTargetSigned() == 0)
+  {
+    Serial.printf("Stepper positions: X: %i, Y: %i\n", stepper_x.getCurrentPositionInSteps(), stepper_y.getCurrentPositionInSteps());
+    delay(5000);
+    previousDirection *= -1;
+    long relativeTargetPosition = DISTANCE_TO_TRAVEL_IN_STEPS * previousDirection;
+    Serial.printf("Moving both stepper motors by %ld steps\n", relativeTargetPosition);
+    stepper_x.setTargetPositionRelativeInSteps(relativeTargetPosition);
+    stepper_y.setTargetPositionRelativeInSteps(relativeTargetPosition);
+    stepper_z.setTargetPositionRelativeInSteps(relativeTargetPosition);
+
+  }
+  Serial.printf("Stepper positions: X: %i, Y: %i, Z: %i\n", stepper_x.getCurrentPositionInSteps(), stepper_y.getCurrentPositionInSteps(),stepper_z.getCurrentPositionInSteps());
+  delay(100);
+  
+  
+  // Notice that you can now do whatever you want in the loop function without the need to call processMovement().
+  // also you do not have to care if your loop processing times are too long. 
+}
