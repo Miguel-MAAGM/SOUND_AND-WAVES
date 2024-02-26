@@ -31,7 +31,7 @@ void WifiManager::connectToServer()
     {
         Serial.println("Conectado al servidor");
         StaticJsonDocument<200> jsonDoc; // Tamaño máximo del JSON
-        jsonDoc["name"] = "TW3";
+        jsonDoc["name"] = "TW2";
         jsonDoc["type"] = "ACT";
 
         // Serializa el objeto JSON a una cadena

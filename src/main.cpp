@@ -1,32 +1,49 @@
 #include "Arduino.h"
-// #include "towerControl.h"
+ #include "towerControl.h"
 #include "WifiManager.h"
 #include "esp_task_wdt.h" // Para trabajar con el WDT en las tareas
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h" // Para trabajar con tareas en FreeRTOS
 #include <ESP_FlexyStepper.h>
-#include "towerControl.h"
+//#include "towerControl.h"
 const char *ssid = "celuMiguel";          // Enter SSID
 const char *password = "12345678";        // Enter Password
 const char *server_ip = "192.168.100.17"; // Enter server adress
 const uint16_t server_port = 12345;       // Enter server port
 
-MotorController MotorCtrl("M1","M2","M3");
+//MotorController MotorCtrl("M1","M2","M3");
 WifiManager Wifi_Manager(ssid, password, server_ip, server_port);
 
 int previousDirection = 1;
 bool processJsonCommand(String jsonString);
+ESP_FlexyStepper stepper_x;
+ESP_FlexyStepper stepper_y;
 
 void setup()
 {
-  pinMode(LIMIT_SWITCH_PIN_A, INPUT_PULLUP);
-  pinMode(LIMIT_SWITCH_PIN_B, INPUT_PULLUP);
+
   Serial.begin(9600);
   // connect and configure the stepper motor to its IO pins
-  MotorCtrl.init();
- 
-  MotorCtrl.moveToHome();
+  //MotorCtrl.init();
+  //pinMode(LIMIT_SWITCH_PIN_A, INPUT_PULLUP);
+  //pinMode(LIMIT_SWITCH_PIN_B, INPUT_PULLUP);
+  // connect and configure the stepper motor to its IO pins
+  stepper_x.connectToPins(MOTOR_X_STEP_PIN, MOTOR_X_DIRECTION_PIN);
+  stepper_y.connectToPins(MOTOR_Y_STEP_PIN, MOTOR_Y_DIRECTION_PIN);
+  // set the speed and acceleration rates for the stepper motor
+  stepper_x.setSpeedInStepsPerSecond(SPEED_IN_STEPS_PER_SECOND);
+  stepper_x.setAccelerationInStepsPerSecondPerSecond(ACCELERATION_IN_STEPS_PER_SECOND);
+  stepper_x.setDecelerationInStepsPerSecondPerSecond(DECELERATION_IN_STEPS_PER_SECOND);
+
+  stepper_y.setSpeedInStepsPerSecond(SPEED_IN_STEPS_PER_SECOND);
+  stepper_y.setAccelerationInStepsPerSecondPerSecond(ACCELERATION_IN_STEPS_PER_SECOND);
+  stepper_y.setDecelerationInStepsPerSecondPerSecond(DECELERATION_IN_STEPS_PER_SECOND);
   
+  // Not start the stepper instance as a service in the "background" as a separate task
+  // and the OS of the ESP will take care of invoking the processMovement() task regularily so you can do whatever you want in the loop function
+  stepper_x.startAsService(1);
+  stepper_y.startAsService(1);
+
   Wifi_Manager.connectToWifi();
 
   Wifi_Manager.connectToServer();
@@ -91,7 +108,8 @@ bool processJsonCommand(String jsonString)
 
     Serial.print("MTV: ");
     Serial.println(MTV);
-    MotorCtrl.moveMotor(MTV,MT1,MT2);
+    stepper_x.setTargetPositionRelativeInSteps(MT1);
+    stepper_y.setTargetPositionRelativeInSteps(MT2);
     Serial.println("Ejecutando comando MOV...");
     // Lleva a cabo las acciones necesarias para el comando "MOV"
   }

@@ -46,8 +46,8 @@ void MotorController::moveMotor(int stepsA,int stepsB,int stepsC)
 
 void MotorController::moveToHome()
 {
-    MTOne.moveToHomeInMillimeters(1,1000,1500,LIMIT_SWITCH_PIN_A);
-    MTSecond.moveToHomeInMillimeters(1,1000,1500,LIMIT_SWITCH_PIN_B);
+    MTOne.moveToHomeInMillimeters(-1,100,1500,LIMIT_SWITCH_PIN_A);
+    MTSecond.moveToHomeInMillimeters(-1,100,1500,LIMIT_SWITCH_PIN_B);
 }
 
 bool MotorController::init()

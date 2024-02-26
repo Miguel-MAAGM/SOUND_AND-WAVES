@@ -18,10 +18,10 @@ const int LIMIT_SWITCH_PIN_A = 15; // define the IO pin the emergency stop switc
 const int LIMIT_SWITCH_PIN_B = 4;  // define the IO pin where the limit switches are connected to (switches in series in normally closed setup against ground)
 
 // Speed settings
-const int DISTANCE_TO_TRAVEL_IN_STEPS = 1800 * 10;
-const int SPEED_IN_STEPS_PER_SECOND = 30000;
-const int ACCELERATION_IN_STEPS_PER_SECOND = 30000;
-const int DECELERATION_IN_STEPS_PER_SECOND = 30000;
+const int DISTANCE_TO_TRAVEL_IN_STEPS = 1000;
+const int SPEED_IN_STEPS_PER_SECOND = 200;
+const int ACCELERATION_IN_STEPS_PER_SECOND = 400;
+const int DECELERATION_IN_STEPS_PER_SECOND = 400;
 
 
 
