@@ -19,5 +19,6 @@
         "system_error": "cpp",
         "functional": "cpp",
         "tuple": "cpp"
-    }
+    },
+    "cmake.configureOnOpen": false
 }
