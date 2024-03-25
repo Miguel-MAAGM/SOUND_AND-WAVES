@@ -4,7 +4,9 @@
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <ArduinoJson.h>
-class WifiManager
+const String ID ="TW1";
+
+class clientManege
 {
 private:
     const char *m_ssid;           // Enter SSID
@@ -16,12 +18,13 @@ private:
     String buffer; // Buffer para acumular los datos
     String buffer_f;
 public:
-    WifiManager(const char *ssid, const char *password,
-                const char *server_ip, const uint16_t server_port);
-    ~WifiManager();
-    void connectToWifi();
-    void connectToServer();
+    clientManege();
+    clientManege(const char *server_ip, const uint16_t server_port);
+    ~clientManege();
+    void setServerParams(const char *server_ip, const uint16_t server_port);
+    bool connectToServer();
     bool checkForData();
+    void sendToclient(String data);
     String getCMD();
     StaticJsonDocument<200> doc;
     String getCfullCMD();

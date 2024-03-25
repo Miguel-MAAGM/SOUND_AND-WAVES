@@ -1,16 +1,13 @@
 #include "Arduino.h"
-#include "towerControl.h"
-#include "WifiManager.h"
+#include "clientManege.h"
 #include "esp_task_wdt.h" // Para trabajar con el WDT en las tareas
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h" // Para trabajar con tareas en FreeRTOS
 #include <ESP_FlexyStepper.h>
 #include <AccelStepper.h>
-
+#include "WiFiManager.h"
+#include "configAPP.h"
 // #include "towerControl.h"
-const char *ssid = "celuMiguel";          // Enter SSID
-const char *password = "12345678";        // Enter Password
-const char *server_ip = "192.168.212.17"; // Enter server adress
 const uint16_t server_port = 12345;       // Enter server port
 
 #define dirPin 12
@@ -18,18 +15,49 @@ const uint16_t server_port = 12345;       // Enter server port
 #define motorInterfaceType 1
 
 // MotorController MotorCtrl("M1","M2","M3");
-WifiManager Wifi_Manager(ssid, password, server_ip, server_port);
 
 int previousDirection = 1;
 bool processJsonCommand(String jsonString);
 ESP_FlexyStepper stepper_x;
 ESP_FlexyStepper stepper_y;
 AccelStepper stepper = AccelStepper(motorInterfaceType, stepPin, dirPin); // Piston
+char ip_addrs[34];
+clientManege Wifi_Manager;
 
 void setup()
 {
 
   Serial.begin(9600);
+  WiFiManagerParameter custom_api_HostIP("apikey", "Host IP", "None", 34);
+  WiFiManager wm;  
+  wm.addParameter(&custom_api_HostIP);
+  wm.setTimeout(300);
+
+  if (!wm.autoConnect("Tower_1")) {
+    Serial.println("failed to connect and hit timeout");
+    delay(3000);
+    //reset and try again, or maybe put it to deep sleep
+    ESP.restart();
+    delay(5000);
+  }
+  strcpy(ip_addrs, custom_api_HostIP.getValue());
+
+   if (strcmp(ip_addrs, "None") == 0) {
+    Serial.println(ip_addrs);
+    ipHost=recuperarIP();
+    Serial.println(ipHost);
+
+    if(ipHost=="None"){
+      Serial.println("ERROR from read IP");
+    }
+  }else{
+    ipHost=String(ip_addrs);
+    guardarIP(ipHost);
+  }
+
+
+  Serial.println(ipHost);
+
   // connect and configure the stepper motor to its IO pins
   // MotorCtrl.init();
   // pinMode(LIMIT_SWITCH_PIN_A, INPUT_PULLUP);
@@ -48,19 +76,29 @@ void setup()
 
   // Not start the stepper instance as a service in the "background" as a separate task
   // and the OS of the ESP will take care of invoking the processMovement() task regularily so you can do whatever you want in the loop function
-  stepper_x.startAsService(1);
-  stepper_y.startAsService(1);
 
-  Wifi_Manager.connectToWifi();
   stepper.setMaxSpeed(1000000); // Maxima Velocidad
   stepper.setAcceleration(500000);
-  Wifi_Manager.connectToServer();
+
+    
+  Wifi_Manager.setServerParams(ipHost.c_str(),server_port);
+  if(!Wifi_Manager.connectToServer()){
+    Serial.println("No conected");
+    delay(5000);
+    wm.resetSettings();
+    ESP.restart();
+  }
+  
+  
   // Maximo = 9000 Minimo=1000 Configuracion Driver 3600 y 2.8 [A]
 
   // stepper_x.moveToHomeInMillimeters(1,100,10000,LIMIT_SWITCH_PIN_A);
   // stepper_y.moveToHomeInMillimeters(1,100,10000,LIMIT_SWITCH_PIN_B);
   stepper.setSpeed(0);
   stepper.runSpeed();
+  stepper_x.startAsService(1);
+  stepper_y.startAsService(1);
+
 }
 
 void loop()
@@ -95,7 +133,21 @@ bool processJsonCommand(String jsonString)
   if (strcmp(CMD, "GET") == 0)
   {
     // Acción para el comando "GET"
-
+    StaticJsonDocument<500> doc;
+    doc["ID"] = ID;
+    doc["CMD"] = "RES";
+    doc["type"] = "ACT";
+    
+    JsonObject m1 = doc.createNestedObject("M1");
+    MotorOne.toJson(m1);
+    JsonObject m2 = doc.createNestedObject("M2");
+    MotorOne.toJson(m2);
+    JsonObject mVI = doc.createNestedObject("MVI");
+    MotorOne.toJson(mVI);
+    String json;
+    serializeJson(doc, json);
+    Wifi_Manager.sendToclient(json);
+    Serial.println(json);
     Serial.println("Ejecutando comando GET...");
 
     // Lleva a cabo las acciones necesarias para el comando "GET"
@@ -103,6 +155,27 @@ bool processJsonCommand(String jsonString)
   else if (strcmp(CMD, "SET") == 0)
   {
     // Acción para el comando "SET"
+    
+    if(doc.containsKey("M1")){
+    JsonObject mtOne = doc["M1"];
+    MotorOne.readFromJson(mtOne);
+    }else{
+      Serial.println("NO KEY");
+    }
+    if(doc.containsKey("M2")){
+    JsonObject mtTWO = doc["M2"];
+    MotorTwo.readFromJson(mtTWO);
+    }else{
+      Serial.println("NO KEY");
+    }
+    if(doc.containsKey("MVI")){
+    JsonObject mtVI = doc["MVI"];
+    MotorVI.readFromJson(mtVI);
+    }else{
+      Serial.println("NO KEY");
+    }
+
+
     Serial.println("Ejecutando comando SET...");
     // Lleva a cabo las acciones necesarias para el comando "SET"
   }
@@ -130,6 +203,7 @@ bool processJsonCommand(String jsonString)
   else if (strcmp(CMD, "STOP") == 0)
   {
     // Acción para el comando "STOP"
+        Wifi_Manager.sendToclient("data");
     Serial.println("Ejecutando comando STOP...");
     // Lleva a cabo las acciones necesarias para el comando "STOP"
   }

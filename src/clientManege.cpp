@@ -1,51 +1,46 @@
-#include "WifiManager.h"
-
-WifiManager::WifiManager(const char *ssid, const char *password,
-                         const char *server_ip, const uint16_t server_port)
+#include "clientManege.h"
+clientManege::clientManege(const char *server_ip, const uint16_t server_port)
 {
-    m_ssid = ssid;
-    m_password = password;
+
+    m_server_ip = server_ip;
+    m_server_port = server_port;
+}
+clientManege::clientManege()
+{
+}
+clientManege::~clientManege()
+{
+}
+
+void clientManege::setServerParams(const char *server_ip, const uint16_t server_port)
+{
     m_server_ip = server_ip;
     m_server_port = server_port;
 }
 
-WifiManager::~WifiManager()
-{
-}
-
-void WifiManager::connectToWifi()
-{
-    WiFi.begin(m_ssid, m_password);
-    Serial.println("Conectando a la red WiFi...");
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        delay(1000);
-        Serial.print(".");
-    }
-    Serial.println("Conexión WiFi exitosa.");
-}
-
-void WifiManager::connectToServer()
+bool clientManege::connectToServer()
 {
     if (client.connect(m_server_ip, m_server_port))
     {
         Serial.println("Conectado al servidor");
         StaticJsonDocument<200> jsonDoc; // Tamaño máximo del JSON
-        jsonDoc["name"] = "TW3";
+        jsonDoc["name"] = ID;
         jsonDoc["type"] = "ACT";
 
         // Serializa el objeto JSON a una cadena
         String jsonStr;
         serializeJson(jsonDoc, jsonStr);
         client.println(jsonStr);
+        return true;
     }
     else
     {
         Serial.println("Error al conectar al servidor.");
+        return false;
     }
 }
 
-bool WifiManager::checkForData()
+bool clientManege::checkForData()
 {
 
     if (client.connected())
@@ -79,12 +74,29 @@ bool WifiManager::checkForData()
     return false;
 }
 
-String WifiManager::getCMD()
+void clientManege::sendToclient(String data)
+{
+    
+  if (client.connected())
+    {
+      client.println(data);
+       
+       
+    }
+    else
+    {
+        Serial.println("SE CERRÓ, INTENTANDO CONECTAR");
+        connectToServer();
+    }
+
+}
+
+String clientManege::getCMD()
 {
     return doc["CMD"];
 }
 
-String WifiManager::getCfullCMD()
+String clientManege::getCfullCMD()
 {
     return buffer_f;
 }
