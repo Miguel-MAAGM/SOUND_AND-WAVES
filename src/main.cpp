@@ -182,9 +182,9 @@ bool processJsonCommand(String jsonString)
   else if (strcmp(CMD, "MOV") == 0)
   {
 
-    int MT1 = doc["M1"];
-    int MT2 = doc["M2"];
-    int MTV = doc["MV"];
+    float MT1 = doc["M1"];
+    float MT2 = doc["M2"];
+    float MTV = doc["MV"];
     Serial.print("MT1: ");
     Serial.println(MT1);
 
