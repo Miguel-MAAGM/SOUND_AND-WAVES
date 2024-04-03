@@ -18,14 +18,15 @@ const int LIMIT_SWITCH_PIN_A = 15; // define the IO pin the emergency stop switc
 const int LIMIT_SWITCH_PIN_B = 4;  // define the IO pin where the limit switches are connected to (switches in series in normally closed setup against ground)
 
 // Speed settings
-const int Steps_Millimeter = 0;
+const int Steps_Millimeter = 20;
 
 const int DISTANCE_TO_TRAVEL_IN_STEPS = 1000;
-const int SPEED_IN_STEPS_PER_SECOND = 50000;
+const int SPEED_IN_STEPS_PER_SECOND = 20000;
 const int ACCELERATION_IN_STEPS_PER_SECOND = 70000;
 const int DECELERATION_IN_STEPS_PER_SECOND = 70000;
 const int STEPS_PER_REVOLUTION = 200;
-const int MAX_STEP = 450000;
+const int TW1_MAX_STEP = 450000;
+const int TW2_MAX_STEP = 65000;
 
 struct motorParams
 {
@@ -34,8 +35,8 @@ struct motorParams
     float AccelSetpPerSecond = ACCELERATION_IN_STEPS_PER_SECOND;
     float DecelSetpPerSecond = DECELERATION_IN_STEPS_PER_SECOND;
     uint32_t StepPerRevolution = STEPS_PER_REVOLUTION;
-    uint8_t base_dir = 0;
-    uint8_t Home_dir = 0;
+    int8_t base_dir = 1;
+    int8_t Home_dir = 1;
     const char *ID;
 
     // Constructor que acepta un ID
@@ -51,8 +52,8 @@ struct motorParams
         preferencias.putFloat("ASPS", AccelSetpPerSecond);
         preferencias.putFloat("DSPS", DecelSetpPerSecond);
         preferencias.putUInt("SPR_", StepPerRevolution);
-        preferencias.putBool("bdir", base_dir);
-        preferencias.putBool("Hdir", Home_dir);
+        preferencias.putInt("bdir", base_dir);
+        preferencias.putInt("Hdir", Home_dir);
 
         preferencias.end();
     }
@@ -67,8 +68,8 @@ struct motorParams
         AccelSetpPerSecond = preferencias.getFloat("ASPS", AccelSetpPerSecond);
         DecelSetpPerSecond = preferencias.getFloat("DSPS", DecelSetpPerSecond);
         StepPerRevolution = preferencias.getUInt("SPR_", StepPerRevolution);
-        base_dir = preferencias.getBool("bdir", base_dir);
-        Home_dir = preferencias.getBool("Hdir", Home_dir);
+        base_dir = preferencias.getInt("bdir", base_dir);
+        Home_dir = preferencias.getInt("Hdir", Home_dir);
 
         preferencias.end();
     }
@@ -79,8 +80,8 @@ struct motorParams
         AccelSetpPerSecond = motorObj["ASPS"].as<float>();
         DecelSetpPerSecond = motorObj["DSPS"].as<float>();
         StepPerRevolution = motorObj["SPR_"].as<uint>();
-        base_dir = motorObj["bdir"].as<uint>();
-        Home_dir = motorObj["Hdir"].as<uint>();
+        base_dir = motorObj["bdir"].as<int>();
+        Home_dir = motorObj["Hdir"].as<int>();
     }
     void toJson(JsonObject m1)
     {

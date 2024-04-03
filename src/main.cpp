@@ -31,10 +31,10 @@ void setup()
   WiFiManagerParameter custom_api_HostIP("apikey", "Host IP", "None", 34);
   WiFiManager wm;  
   wm.addParameter(&custom_api_HostIP);
-  wm.setTimeout(300);
-
-  if (!wm.autoConnect("Tower_1")) {
+  String SSID="MACHINE_"+ID;
+  if (!wm.autoConnect(SSID.c_str())) {
     Serial.println("failed to connect and hit timeout");
+
     delay(3000);
     //reset and try again, or maybe put it to deep sleep
     ESP.restart();
@@ -55,9 +55,9 @@ void setup()
     guardarIP(ipHost);
   }
 
-
-  Serial.println(ipHost);
-
+  MotorOne.loadPreferences();
+  MotorTwo.loadPreferences();
+  MotorVI.loadPreferences();
   // connect and configure the stepper motor to its IO pins
   // MotorCtrl.init();
   // pinMode(LIMIT_SWITCH_PIN_A, INPUT_PULLUP);
@@ -66,26 +66,35 @@ void setup()
   stepper_x.connectToPins(MOTOR_X_STEP_PIN, MOTOR_X_DIRECTION_PIN);
   stepper_y.connectToPins(MOTOR_Y_STEP_PIN, MOTOR_Y_DIRECTION_PIN);
   // set the speed and acceleration rates for the stepper motor
-  stepper_x.setSpeedInStepsPerSecond(SPEED_IN_STEPS_PER_SECOND);
-  stepper_x.setAccelerationInStepsPerSecondPerSecond(ACCELERATION_IN_STEPS_PER_SECOND);
-  stepper_x.setDecelerationInStepsPerSecondPerSecond(DECELERATION_IN_STEPS_PER_SECOND);
+  stepper_x.setSpeedInStepsPerSecond(MotorOne.SpeedStepPerSecond);
+  stepper_x.setAccelerationInStepsPerSecondPerSecond(MotorOne.AccelSetpPerSecond);
+  stepper_x.setDecelerationInStepsPerSecondPerSecond(MotorOne.DecelSetpPerSecond);
+  //stepper_x.setStepsPerMillimeter(MotorOne.StepsPerMillimeter);
+  //stepper_x.setLimitSwitchActive(MotorOne.StepPerRevolution);
+  //stepper_x.setDirectionToHome(MotorOne.Home_dir);
 
-  stepper_y.setSpeedInStepsPerSecond(SPEED_IN_STEPS_PER_SECOND);
-  stepper_y.setAccelerationInStepsPerSecondPerSecond(ACCELERATION_IN_STEPS_PER_SECOND);
-  stepper_y.setDecelerationInStepsPerSecondPerSecond(DECELERATION_IN_STEPS_PER_SECOND);
-
+  stepper_y.setSpeedInStepsPerSecond(MotorTwo.SpeedStepPerSecond);
+  stepper_y.setAccelerationInStepsPerSecondPerSecond(MotorTwo.AccelSetpPerSecond);
+  stepper_y.setDecelerationInStepsPerSecondPerSecond(MotorTwo.DecelSetpPerSecond);
+  //stepper_y.setStepsPerMillimeter(MotorTwo.StepsPerMillimeter);
+  //stepper_y.setLimitSwitchActive(MotorTwo.StepPerRevolution);
+  //stepper_y.setDirectionToHome(MotorTwo.Home_dir);
+  
   // Not start the stepper instance as a service in the "background" as a separate task
   // and the OS of the ESP will take care of invoking the processMovement() task regularily so you can do whatever you want in the loop function
 
-  stepper.setMaxSpeed(1000000); // Maxima Velocidad
-  stepper.setAcceleration(500000);
+  stepper.setMaxSpeed(MotorVI.SpeedStepPerSecond); // Maxima Velocidad
+  stepper.setAcceleration(MotorVI.AccelSetpPerSecond);
+  stepper.setSpeed(0);
+  stepper.runSpeed();
 
-    
+  stepper_y.moveToHomeInSteps(MotorTwo.Home_dir,20000,450000,LIMIT_SWITCH_PIN_B);
+  stepper_x.moveToHomeInSteps(MotorOne.Home_dir,20000,450000,LIMIT_SWITCH_PIN_A);
+  
   Wifi_Manager.setServerParams(ipHost.c_str(),server_port);
   if(!Wifi_Manager.connectToServer()){
     Serial.println("No conected");
     delay(5000);
-    wm.resetSettings();
     ESP.restart();
   }
   
@@ -94,8 +103,9 @@ void setup()
 
   // stepper_x.moveToHomeInMillimeters(1,100,10000,LIMIT_SWITCH_PIN_A);
   // stepper_y.moveToHomeInMillimeters(1,100,10000,LIMIT_SWITCH_PIN_B);
-  stepper.setSpeed(0);
-  stepper.runSpeed();
+
+  stepper_x.setCurrentPositionAsHomeAndStop();
+  stepper_y.setCurrentPositionAsHomeAndStop();
   stepper_x.startAsService(1);
   stepper_y.startAsService(1);
 
@@ -115,10 +125,13 @@ void loop()
   // Notice that you can now do whatever you want in the loop function without the need to call processMovement().
   // also you do not have to care if your loop processing times are too long.
 }
+int toSteps(float data, int limit){
+  return (int)((data + 1) * (limit/2));
+}
 
 bool processJsonCommand(String jsonString)
 {
-  StaticJsonDocument<200> doc;
+  StaticJsonDocument<500> doc;
   DeserializationError error = deserializeJson(doc, jsonString);
 
   if (error)
@@ -141,9 +154,9 @@ bool processJsonCommand(String jsonString)
     JsonObject m1 = doc.createNestedObject("M1");
     MotorOne.toJson(m1);
     JsonObject m2 = doc.createNestedObject("M2");
-    MotorOne.toJson(m2);
+    MotorTwo.toJson(m2);
     JsonObject mVI = doc.createNestedObject("MVI");
-    MotorOne.toJson(mVI);
+    MotorVI.toJson(mVI);
     String json;
     serializeJson(doc, json);
     Wifi_Manager.sendToclient(json);
@@ -159,23 +172,29 @@ bool processJsonCommand(String jsonString)
     if(doc.containsKey("M1")){
     JsonObject mtOne = doc["M1"];
     MotorOne.readFromJson(mtOne);
+    MotorOne.savePreferences();
+    MotorOne.loadPreferences();
+    
+    
     }else{
       Serial.println("NO KEY");
     }
     if(doc.containsKey("M2")){
     JsonObject mtTWO = doc["M2"];
     MotorTwo.readFromJson(mtTWO);
+    MotorTwo.savePreferences();
     }else{
       Serial.println("NO KEY");
     }
     if(doc.containsKey("MVI")){
     JsonObject mtVI = doc["MVI"];
     MotorVI.readFromJson(mtVI);
+    MotorVI.savePreferences();
     }else{
       Serial.println("NO KEY");
     }
 
-
+    printMotorParams(MotorOne);
     Serial.println("Ejecutando comando SET...");
     // Lleva a cabo las acciones necesarias para el comando "SET"
   }
@@ -185,18 +204,30 @@ bool processJsonCommand(String jsonString)
     float MT1 = doc["M1"];
     float MT2 = doc["M2"];
     float MTV = doc["MV"];
+
+
+
     Serial.print("MT1: ");
     Serial.println(MT1);
-
+    Serial.println(toSteps(MT1,TW1_MAX_STEP));
+    int MF_ONE=toSteps(MT1,TW1_MAX_STEP);
     Serial.print("MT2: ");
-    Serial.println(MT2);
-
+     Serial.println(MT2);
+     Serial.println(toSteps(MT2,TW2_MAX_STEP));
+    int MF_TWO=toSteps(MT2,TW2_MAX_STEP);
     Serial.print("MTV: ");
     Serial.println(MTV);
-    stepper.setSpeed(MTV);
 
-    stepper_x.setTargetPositionRelativeInSteps(MT1);
-    stepper_y.setTargetPositionRelativeInSteps(MT2);
+    
+    Serial.println(MT1);
+    Serial.println(MT2);
+    
+    
+    stepper_x.setTargetPositionInSteps(MF_ONE*MotorOne.base_dir);
+    stepper_y.setTargetPositionInSteps(MF_TWO*MotorTwo.base_dir);
+    int value=0;
+    value =MotorVI.SpeedStepPerSecond*MTV;
+    stepper.setSpeed(value*MotorVI.base_dir);
     Serial.println("Ejecutando comando MOV...");
     // Lleva a cabo las acciones necesarias para el comando "MOV"
   }
